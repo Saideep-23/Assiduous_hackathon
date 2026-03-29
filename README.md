@@ -48,7 +48,7 @@ Ingestion needs **`ALPHA_VANTAGE_API_KEY`**. The Agent page needs **`ANTHROPIC_A
 ## Quick start (Docker)
 
 ```bash
-git clone <your-repo-url> assiduos
+git clone https://github.com/Saideep-23/Assiduous_hackathon.git assiduos
 cd assiduos
 cp .env.example .env
 # Edit .env: ANTHROPIC_API_KEY=... and ALPHA_VANTAGE_API_KEY=...
