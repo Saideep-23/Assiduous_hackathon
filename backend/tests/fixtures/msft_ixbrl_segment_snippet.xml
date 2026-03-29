@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- Minimal inline-XBRL fragment mimicking MSFT segment members (tests only). -->
+<html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
+      xmlns:xbrli="http://www.xbrl.org/2003/instance"
+      xmlns:us-gaap="http://fasb.org/us-gaap/2023"
+      xmlns:microsoft="http://microsoft.com/20240630">
+  <ix:context id="ctx_ic">
+    <xbrli:entity>
+      <xbrli:segment>
+        <xbrli:explicitMember dimension="us-gaap:StatementBusinessSegmentsAxis">microsoft:IntelligentCloudMember</xbrli:explicitMember>
+      </xbrli:segment>
+    </xbrli:entity>
+    <xbrli:period>
+      <xbrli:endDate>2024-06-30</xbrli:endDate>
+    </xbrli:period>
+  </ix:context>
+  <ix:nonFraction name="us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax" contextRef="ctx_ic" scale="6">95000</ix:nonFraction>
+  <ix:context id="ctx_oi">
+    <xbrli:entity>
+      <xbrli:segment>
+        <xbrli:explicitMember dimension="us-gaap:StatementBusinessSegmentsAxis">microsoft:IntelligentCloudMember</xbrli:explicitMember>
+      </xbrli:segment>
+    </xbrli:entity>
+    <xbrli:period>
+      <xbrli:endDate>2024-06-30</xbrli:endDate>
+    </xbrli:period>
+  </ix:context>
+  <ix:nonFraction name="us-gaap:OperatingIncomeLoss" contextRef="ctx_oi" scale="6">21000</ix:nonFraction>
+</html>

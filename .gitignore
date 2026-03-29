@@ -1,0 +1,26 @@
+# Secrets — copy .env.example to .env locally (never commit .env)
+.env
+.env.local
+.env.*.local
+backend/agent/.env
+
+# Local SQLite databases (may contain ingested data)
+msft.db
+**/msft.db
+
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

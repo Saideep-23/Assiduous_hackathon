@@ -1,0 +1,55 @@
+services:
+  chroma:
+    image: chromadb/chroma:0.5.23
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=False
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/data/msft.db
+      - CHROMA_URL=http://chroma:8000
+      - FRONTEND_ORIGIN=http://localhost:3000
+    volumes:
+      - sqlite_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()",
+        ]
+      interval: 4s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    depends_on:
+      - chroma
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Next.js server proxies /api/* → FastAPI (browser uses same-origin /api; no CORS, works in Docker).
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  sqlite_data:
+  chroma_data:

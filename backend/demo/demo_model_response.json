@@ -1,0 +1,276 @@
+{
+  "scenarios": {
+    "Base": {
+      "implied_share_price": 420.5,
+      "premium_discount_to_spot_pct": 3.2,
+      "terminal_value_pct_of_ev": 52.1,
+      "key_assumptions": [
+        {
+          "segment": "Productivity and Business Processes",
+          "growth": 0.12,
+          "margin": 0.41,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "Intelligent Cloud",
+          "growth": 0.22,
+          "margin": 0.45,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "More Personal Computing",
+          "growth": 0.05,
+          "margin": 0.33,
+          "growth_source": "demo snapshot"
+        }
+      ]
+    },
+    "Upside": {
+      "implied_share_price": 465.0,
+      "premium_discount_to_spot_pct": 14.1,
+      "terminal_value_pct_of_ev": 48.0,
+      "key_assumptions": [
+        {
+          "segment": "Productivity and Business Processes",
+          "growth": 0.12,
+          "margin": 0.41,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "Intelligent Cloud",
+          "growth": 0.22,
+          "margin": 0.45,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "More Personal Computing",
+          "growth": 0.05,
+          "margin": 0.33,
+          "growth_source": "demo snapshot"
+        }
+      ]
+    },
+    "Downside": {
+      "implied_share_price": 372.0,
+      "premium_discount_to_spot_pct": -8.7,
+      "terminal_value_pct_of_ev": 58.0,
+      "key_assumptions": [
+        {
+          "segment": "Productivity and Business Processes",
+          "growth": 0.12,
+          "margin": 0.41,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "Intelligent Cloud",
+          "growth": 0.22,
+          "margin": 0.45,
+          "growth_source": "demo snapshot"
+        },
+        {
+          "segment": "More Personal Computing",
+          "growth": 0.05,
+          "margin": 0.33,
+          "growth_source": "demo snapshot"
+        }
+      ]
+    }
+  },
+  "model_warnings": [],
+  "stress_scenarios": {
+    "wacc_plus_100bps": {
+      "implied_share_price": 405.0,
+      "description": "demo flat WACC +100 bps"
+    },
+    "terminal_growth_minus_100bps": {
+      "implied_share_price": 398.0,
+      "description": "demo terminal g -100 bps"
+    }
+  },
+  "macro_stress_extended": {
+    "revenue_level_minus_15pct": {
+      "implied_share_price": 360.0,
+      "description": "TTM revenue anchor scaled to 85%."
+    },
+    "multiple_compression_heuristic_18pct_equity_haircut": {
+      "implied_share_price": 344.81,
+      "description": "Heuristic: 18% haircut to base-case implied price."
+    },
+    "rates_plus_400bps_flat_wacc": {
+      "implied_share_price": 310.0,
+      "description": "Flat WACC +400 bps vs headline mean."
+    }
+  },
+  "methodology_narrative": {
+    "title": "Microsoft Corporate Finance Autopilot \u2014 valuation methodology",
+    "summary": "The model is a single-name (MSFT) discounted cash flow with segment-sourced growth and margin scenarios, explicit free cash flows, and a terminal value. It is deterministic: all dollar inputs come from ingestion or stated methodology constants; nothing is invented in the UI.",
+    "explicit_horizon": "The explicit revenue path uses 7 years at scenario growth and margin assumptions, followed by 3 years where revenue growth linearly fades toward the terminal growth rate (total pre-perpetuity horizon = 10 years). This reduces reliance on a single jump from year-5 revenue to a perpetuity versus a shorter explicit window.",
+    "terminal_growth_cap": "Long-run growth is capped at 2.5% (TERMINAL_GROWTH_CAP). The terminal rate used is the lesser of that cap and the base consolidated revenue growth implied by segments, floored at 0.5% for numerical stability in the Gordon growth formula (WACC \u2212 g > 0). The cap is a model discipline device\u2014judges should treat terminal value as sensitive to g and WACC.",
+    "wacc_and_term_structure": "Cost of equity uses CAPM with a stated US equity risk premium (Damodaran-style constant in code). The risk-free rate is interpolated between a short end (2Y Treasury when ingested, otherwise 10Y minus a fixed 0.45% spread) and the ingested 10Y rate across the explicit horizon, so WACC varies by year instead of applying one long rate to every cash flow date. Cost of debt prefers a three-fiscal-year average of interest expense over total debt when aligned; otherwise TTM on book debt. Operating and finance lease liabilities (when ingested) are added to book debt for capital-structure weights.",
+    "working_capital": "When Accounts Receivable, Inventory, and Accounts Payable (current) are available for the same fiscal labels as revenue, the model uses \u0394(AR + Inventory \u2212 AP) / \u0394Revenue for the NWC cash drag. Otherwise it falls back to \u0394(Current assets \u2212 Current liabilities) / \u0394Revenue. The operating definition better matches economic working capital for many industrials and tech names.",
+    "capex_and_segments": "Consolidated capex is taken as a ratio to revenue from filings. For the DCF, that ratio is scaled by a revenue-weighted intensity factor that allocates higher capital intensity to the Intelligent Cloud segment (documented constant) to reflect that cloud infrastructure capex is often disproportionate to revenue share.",
+    "macro_stress": "Macro-style scenarios combine (1) flat WACC shocks in basis points, (2) a proportional shock to revenue level for the entire path, and (3) a heuristic 'multiple compression' adjustment applied to the implied equity value. These are approximations for judge/demo use\u2014not a full macro equilibrium model.",
+    "limitations_bullets": [
+      "Segment iXBRL extraction depends on MSFT filing structure; ingestion logs warnings if parsing is thin.",
+      "Market data (Yahoo / Treasury) can be stale or rate-limited; Alpha Vantage is an optional fallback.",
+      "The sensitivity grid uses a flat WACC per cell for speed; scenario valuations use the year-by-year WACC path."
+    ]
+  },
+  "position_guidance": {
+    "summary": "Demo snapshot \u2014 base-case implied vs spot is in a moderate band.",
+    "disclaimer": "Educational heuristic only; not investment advice."
+  },
+  "segment_capex_proxy": [
+    {
+      "segment": "Productivity and Business Processes",
+      "revenue_share": 0.31,
+      "implied_capex_proxy_ttm": 4200000000.0,
+      "capex_intensity": 1.0
+    },
+    {
+      "segment": "Intelligent Cloud",
+      "revenue_share": 0.45,
+      "implied_capex_proxy_ttm": 6800000000.0,
+      "capex_intensity": 1.12
+    },
+    {
+      "segment": "More Personal Computing",
+      "revenue_share": 0.24,
+      "implied_capex_proxy_ttm": 2900000000.0,
+      "capex_intensity": 1.0
+    }
+  ],
+  "methodology_notes": [
+    "This JSON is a static demo snapshot for ASSIDUOS_DEMO=1 \u2014 live POST /model/msft runs the full engine."
+  ],
+  "wacc_components": {
+    "risk_free_rate_10y": 0.042,
+    "risk_free_rate_short_for_curve": 0.038,
+    "risk_free_short_source": "demo",
+    "beta_5y_monthly": 0.92,
+    "equity_risk_premium": 0.055,
+    "cost_of_equity_capm_spot": 0.0926,
+    "cost_of_debt": 0.032,
+    "cost_of_debt_source": "demo",
+    "interest_expense_tag": "us-gaap:InterestExpense",
+    "total_debt_book": 50000000000.0,
+    "lease_liabilities_latest_fy": 20000000000.0,
+    "debt_for_capital_structure": 70000000000.0,
+    "total_debt_components": "demo",
+    "tax_rate_for_wacc": 0.18,
+    "weight_equity_market_cap": 0.95,
+    "weight_debt_book_incl_leases": 0.05,
+    "wacc": 0.088,
+    "wacc_path_mean": 0.088,
+    "wacc_year1": 0.087,
+    "wacc_terminal_year": 0.089,
+    "explicit_years": 7,
+    "terminal_fade_years": 3,
+    "total_explicit_years_before_perpetuity": 10,
+    "wacc_degraded_warning": false
+  },
+  "share_count_analysis": null,
+  "fcf_bridge_tree": {
+    "steps": [
+      {
+        "name": "D&A add-back",
+        "ratio": 0.032,
+        "source_periods": "demo",
+        "formula": "avg(D&A / Revenue)"
+      },
+      {
+        "name": "Tax on EBIT",
+        "rate": 0.18,
+        "source_periods": "demo",
+        "formula": "effective tax rate"
+      },
+      {
+        "name": "Capex (consolidated ratio \u00d7 segment intensity)",
+        "ratio_consolidated": 0.11,
+        "ratio_in_dcf": 0.115,
+        "segment_intensity_blend": 1.045,
+        "source_periods": "demo",
+        "formula": "avg(|Capex|/Revenue) \u00d7 segment intensity blend"
+      },
+      {
+        "name": "Change in NWC",
+        "ratio_of_revenue_change": 0.02,
+        "source_periods": "demo",
+        "formula": "operating WC / \u0394Revenue",
+        "detail": {
+          "mode": "operating_ar_inv_ap"
+        }
+      }
+    ],
+    "nwc_methodology": {
+      "mode": "operating_ar_inv_ap",
+      "balance_sheet_proxy": "Prefer AR + Inventory \u2212 AP when tags align.",
+      "interpretation": "\u0394NWC / \u0394Revenue on last two FYs.",
+      "capex_in_dcf": "Capex uses segment-intensity-adjusted ratio."
+    }
+  },
+  "assumptions_table": [
+    {
+      "input": "Demo",
+      "value": true,
+      "source": "demo_model_response.json",
+      "classification": "demo"
+    }
+  ],
+  "sensitisation": {
+    "wacc_axis": [
+      0.075,
+      0.0825,
+      0.09,
+      0.0975,
+      0.105
+    ],
+    "terminal_growth_axis": [
+      0.015,
+      0.02,
+      0.025,
+      0.03,
+      0.035
+    ],
+    "implied_share_price_grid": [
+      [
+        380,
+        383,
+        386,
+        389,
+        392
+      ],
+      [
+        385,
+        388,
+        391,
+        394,
+        397
+      ],
+      [
+        390,
+        393,
+        396,
+        399,
+        402
+      ],
+      [
+        395,
+        398,
+        401,
+        404,
+        407
+      ],
+      [
+        400,
+        403,
+        406,
+        409,
+        412
+      ]
+    ]
+  },
+  "consistency_checks": {},
+  "segment_inputs": [],
+  "historical_snapshot": {}
+}
