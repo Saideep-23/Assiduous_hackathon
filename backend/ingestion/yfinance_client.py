@@ -1,10 +1,7 @@
 """MSFT spot price and 5-year monthly beta vs SPY.
 
-Primary source: Yahoo Finance chart API (v8), same data the yfinance library uses.
-
-Yahoo often returns HTTP 429 from cloud/Docker/datacenter IPs. If ``ALPHA_VANTAGE_API_KEY``
-is set in the environment, we fall back to Alpha Vantage ``TIME_SERIES_MONTHLY_ADJUSTED``
-(free tier: https://www.alphavantage.co/support/#api-key).
+Monthly adjusted closes come from Alpha Vantage ``TIME_SERIES_MONTHLY_ADJUSTED``.
+``ALPHA_VANTAGE_API_KEY`` must be set in the environment (see ``.env.example``).
 """
 
 from __future__ import annotations
@@ -21,67 +18,14 @@ import requests
 
 from database.connection import get_connection
 
-YAHOO_CHART_HOSTS = (
-    "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}",
-    "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}",
-)
 
-
-def _browser_headers() -> dict[str, str]:
-    return {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        ),
-        "Accept": "application/json",
-    }
-
-
-def _monthly_adj_close_series(symbol: str) -> pd.Series:
-    last_err: Exception | None = None
-    for host in YAHOO_CHART_HOSTS:
-        url = host.format(symbol=symbol)
-        for attempt in range(4):
-            r = requests.get(
-                url,
-                params={"range": "5y", "interval": "1mo"},
-                headers=_browser_headers(),
-                timeout=90,
-            )
-            if r.status_code in (429, 503):
-                time.sleep(1.5 * (2**attempt))
-                continue
-            if not r.ok:
-                last_err = requests.HTTPError(f"{r.status_code} for {url}", response=r)
-                break
-            payload = r.json()
-            block = payload.get("chart", {}).get("result")
-            if not block:
-                raise ValueError(f"Yahoo chart returned no result for {symbol}")
-            data = block[0]
-            ts = data.get("timestamp") or []
-            adj = (data.get("indicators") or {}).get("adjclose", [{}])[0].get("adjclose")
-            if not ts or not adj or len(ts) != len(adj):
-                raise ValueError(f"Yahoo chart series incomplete for {symbol}")
-            idx = pd.DatetimeIndex([datetime.fromtimestamp(t, tz=timezone.utc) for t in ts])
-            s = pd.Series([float(x) for x in adj], index=idx, dtype="float64")
-            return s.dropna()
-        continue
-    if last_err:
-        raise last_err
-    raise ValueError(f"Could not load Yahoo chart for {symbol}")
-
-
-def _monthly_adj_close_series_alphavantage(symbol: str) -> pd.Series:
-    key = os.environ.get("ALPHA_VANTAGE_API_KEY", "").strip()
-    if not key:
-        raise ValueError("ALPHA_VANTAGE_API_KEY is not set")
+def _monthly_adj_close_series(symbol: str, api_key: str) -> pd.Series:
     r = requests.get(
         "https://www.alphavantage.co/query",
         params={
             "function": "TIME_SERIES_MONTHLY_ADJUSTED",
             "symbol": symbol,
-            "apikey": key,
+            "apikey": api_key,
         },
         timeout=120,
     )
@@ -120,23 +64,15 @@ def _is_stale(pulled_at: str, observation_ts: datetime) -> bool:
 
 
 def fetch_price_and_beta() -> dict[str, Any]:
-    av_key = os.environ.get("ALPHA_VANTAGE_API_KEY", "").strip()
-    price_source = "yahoo_chart"
-    try:
-        hist = _monthly_adj_close_series("MSFT")
-        time.sleep(0.4)
-        spy = _monthly_adj_close_series("SPY")
-    except Exception as yahoo_err:
-        if not av_key:
-            raise ValueError(
-                "Could not load prices from Yahoo Finance (HTTP 429/blocks are common from Docker "
-                "or datacenter IPs). Add a free ALPHA_VANTAGE_API_KEY to .env for monthly adjusted "
-                "MSFT/SPY history, or run ingestion from a network where Yahoo succeeds."
-            ) from yahoo_err
-        hist = _monthly_adj_close_series_alphavantage("MSFT")
-        time.sleep(15)
-        spy = _monthly_adj_close_series_alphavantage("SPY")
-        price_source = "alphavantage_monthly_adjusted"
+    key = os.environ.get("ALPHA_VANTAGE_API_KEY", "").strip()
+    if not key:
+        raise ValueError(
+            "ALPHA_VANTAGE_API_KEY is not set. Add it to your .env file (see .env.example)."
+        )
+    hist = _monthly_adj_close_series("MSFT", key)
+    time.sleep(15)
+    spy = _monthly_adj_close_series("SPY", key)
+    price_source = "alphavantage_monthly_adjusted"
 
     if hist.empty or spy.empty:
         raise ValueError("MSFT or SPY monthly history is empty — cannot compute spot price or beta")

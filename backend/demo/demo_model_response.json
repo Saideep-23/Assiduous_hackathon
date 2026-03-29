@@ -112,7 +112,7 @@
     "macro_stress": "Macro-style scenarios combine (1) flat WACC shocks in basis points, (2) a proportional shock to revenue level for the entire path, and (3) a heuristic 'multiple compression' adjustment applied to the implied equity value. These are approximations for judge/demo use\u2014not a full macro equilibrium model.",
     "limitations_bullets": [
       "Segment iXBRL extraction depends on MSFT filing structure; ingestion logs warnings if parsing is thin.",
-      "Market data (Yahoo / Treasury) can be stale or rate-limited; Alpha Vantage is an optional fallback.",
+      "MSFT/SPY prices and beta come from Alpha Vantage; Treasury rates from Fiscal Data API \u2014 observation timestamps can lag real-time.",
       "The sensitivity grid uses a flat WACC per cell for speed; scenario valuations use the year-by-year WACC path."
     ]
   },

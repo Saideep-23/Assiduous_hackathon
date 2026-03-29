@@ -1,6 +1,6 @@
 # Microsoft Corporate Finance Autopilot
 
-End-to-end **Microsoft (MSFT)–only** pipeline: SEC EDGAR ingestion → SQLite → deterministic DCF and WACC → optional Chroma RAG → **Claude** investment memo with validation → **Next.js** UI (Overview, Model, Agent).
+End-to-end **Microsoft (MSFT)–only** pipeline: SEC EDGAR ingestion → SQLite → deterministic DCF and WACC → Chroma RAG → **Claude** investment memo with validation → **Next.js** UI (Overview, Model, Agent).
 
 **Educational / hackathon demo — not investment advice.**
 
@@ -14,21 +14,22 @@ End-to-end **Microsoft (MSFT)–only** pipeline: SEC EDGAR ingestion → SQLite 
 4. [Environment variables](#environment-variables)  
 5. [Architecture](#architecture)  
 6. [API reference](#api-reference)  
-7. [Operations](#operations)  
-8. [Agent page & streaming (important)](#agent-page--streaming-important)  
-9. [Limitations](#limitations)  
-10. [Troubleshooting](#troubleshooting)  
-11. [Development without Docker](#development-without-docker)  
-12. [Data sources](#data-sources)  
-13. [Disclaimer](#disclaimer)
+7. [Quick 3-minute demo walkthrough](#quick-3-minute-demo-walkthrough)  
+8. [Operations](#operations)  
+9. [Agent page & streaming (important)](#agent-page--streaming-important)  
+10. [Limitations](#limitations)  
+11. [Troubleshooting](#troubleshooting)  
+12. [Development without Docker](#development-without-docker)  
+13. [Data sources](#data-sources)  
+14. [Disclaimer](#disclaimer)
 
 ---
 
 ## Requirements
 
-- **Docker** and **Docker Compose** (recommended path)  
-- **Anthropic API key** for `POST /agent/run` (memo generation)  
-- Optional: **Alpha Vantage** API key if Yahoo Finance rate-limits your network (common from cloud/Docker IPs)
+- **Docker** and **Docker Compose**  
+- **Anthropic API key** — `POST /agent/run` (Claude memo)  
+- **Alpha Vantage API key** — MSFT and SPY monthly adjusted prices and beta during `POST /ingest/msft`
 
 ---
 
@@ -37,10 +38,10 @@ End-to-end **Microsoft (MSFT)–only** pipeline: SEC EDGAR ingestion → SQLite 
 This repository **does not** include `.env` or API keys. After cloning:
 
 1. **Copy the template:** `cp .env.example .env`
-2. **Add your keys** in `.env` (at minimum `ANTHROPIC_API_KEY` for the Agent page).
+2. **Set both API keys** in `.env`: `ANTHROPIC_API_KEY` and `ALPHA_VANTAGE_API_KEY` (see **Environment variables**).
 3. **Never commit** `.env` — it is listed in `.gitignore`.
 
-Optional keys are documented in the **Environment variables** section below. The app runs ingestion and the model **without** Anthropic; only **`POST /agent/run`** (memo generation) requires `ANTHROPIC_API_KEY`.
+Ingestion needs **`ALPHA_VANTAGE_API_KEY`**. The Agent page needs **`ANTHROPIC_API_KEY`**.
 
 ---
 
@@ -50,8 +51,7 @@ Optional keys are documented in the **Environment variables** section below. The
 git clone <your-repo-url> assiduos
 cd assiduos
 cp .env.example .env
-# Edit .env: set ANTHROPIC_API_KEY=... (required for the Agent page)
-# Optional: ALPHA_VANTAGE_API_KEY=... if Yahoo returns HTTP 429 during ingestion
+# Edit .env: ANTHROPIC_API_KEY=... and ALPHA_VANTAGE_API_KEY=...
 docker compose up --build
 ```
 
@@ -68,7 +68,7 @@ docker compose up --build
 curl -X POST http://localhost:8000/ingest/msft
 ```
 
-Then open the **Overview** and **Model** pages. Use **Agent** after ingestion completes and `ANTHROPIC_API_KEY` is set.
+Then open the **Overview** and **Model** pages. Use **Agent** after ingestion completes.
 
 ---
 
@@ -78,10 +78,10 @@ Create **`.env`** in the **project root** (same folder as `docker-compose.yml`).
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `ANTHROPIC_API_KEY` | **Yes** for Agent | Claude API for memo sections |
-| `ALPHA_VANTAGE_API_KEY` | No | Fallback monthly prices if Yahoo chart API returns HTTP 429 |
-| `ASSIDUOS_DEMO` | No | Set to `1` with `backend/demo/demo_model_response.json` to enable `GET /model/msft/demo` |
-| `FRONTEND_ORIGINS` | No | Comma-separated CORS origins; defaults include `http://localhost:3000` and `http://127.0.0.1:3000` |
+| `ANTHROPIC_API_KEY` | **Yes** | Claude API for `POST /agent/run` memo sections |
+| `ALPHA_VANTAGE_API_KEY` | **Yes** | Alpha Vantage monthly adjusted MSFT/SPY for spot price and 5Y beta during ingestion |
+| `ASSIDUOS_DEMO` | For demo route only | Set to `1` with `backend/demo/demo_model_response.json` to enable `GET /model/msft/demo` |
+| `FRONTEND_ORIGINS` | Usually no | Comma-separated CORS origins; defaults include `http://localhost:3000` and `http://127.0.0.1:3000` |
 
 Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` for the backend — see `docker-compose.yml`.
 
@@ -95,7 +95,7 @@ Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` fo
 
 - **SEC Company Facts** (`data.sec.gov`) → `raw_metrics` → **transform** → `financial_metrics` (TTM, effective tax, debt totals, etc.).
 - **Inline XBRL** from 10-K/10-Q HTML → **segment** revenue and operating income.
-- **Yahoo** chart API (v5/v8) for MSFT/SPY monthly adjusted closes → spot + **5Y monthly beta** vs SPY; optional **Alpha Vantage** fallback.
+- **Alpha Vantage** `TIME_SERIES_MONTHLY_ADJUSTED` for MSFT/SPY monthly adjusted closes → spot + **5Y monthly beta** vs SPY.
 - **Treasury Fiscal Data API v2** `avg_interest_rates`: **Treasury Notes** → `risk_free_rate_10y`; **Treasury Bills** → stored as `risk_free_rate_2y` (legacy metric name — short-end **Bills** average, not a broker 2Y CMT).
 - **Qualitative** sections from latest 10-K; **chunks + embeddings** into **ChromaDB** (FastEmbed `BAAI/bge-small-en-v1.5`).
 
@@ -132,6 +132,57 @@ Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` fo
 
 ---
 
+## Quick 3-minute demo walkthrough
+
+After `docker compose up`, open **http://localhost:3000** and walk through these screens:
+
+### [0:00–0:30] Opening
+> "Assiduos is a deterministic DCF engine with term-structured WACC, true working capital from SEC XBRL, and segment-aware CapEx. No black box, full audit trail."
+
+### [0:30–1:15] The valuation
+1. Navigate to **Model** page.
+2. Scroll to **Scenarios** table (Base/Upside/Downside).
+3. Point to **Implied Share Price** row.
+4. Scroll to **Sensitivity Grid** (5×5 WACC × Terminal Growth).
+> "Base case ~$415–425 per share. Sensitivity shows range from downside to upside across realistic assumption combinations."
+
+### [1:15–1:50] Methodology transparency
+1. Scroll to **Methodology Narrative** section (6 bullets):
+   - Explicit Horizon: 7Y base + 3Y fade = 10 explicit years
+   - Terminal Growth: Capped at 2.5% (can't perpetually beat US GDP 2.5%)
+   - WACC & Term Structure: 2Y→10Y Treasury interpolation, lease-adjusted
+   - Working Capital: Real AR+Inv−AP from SEC XBRL tags
+   - CapEx & Segments: Cloud weighted 1.12× for infrastructure premium
+   - Macro Stress: Revenue −15%, multiple compression −18%, rates +400bps
+> "Every line is explainable. Judges can verify the logic in your 10-K."
+
+### [1:50–2:35] Stress & scenarios
+1. Scroll to **Macro Stress Scenarios** (3 shocks).
+2. Show **Segment CapEx Allocation** table.
+> "Not point estimates. Here's what happens if revenue stalls, market reprices, or rates spike. Cloud region gets heavier capex weighting because datacenter infrastructure is cost-intensive."
+
+### [2:35–2:55] Provenance (audit trail)
+1. Right sidebar: **Provenance panel**, click through each metric:
+   - Risk-free rate (10Y Treasury) 
+   - Beta (5Y monthly vs SPY)
+   - Share count (SEC filing, treasury stock method)
+   - Segment revenue (iXBRL parse from 10-K)
+   - FCF bridge (model formula)
+   - WACC/terminal g (methodology)
+> "Every number is traced to source. Click any cell to see how it was calculated."
+
+### [2:55–3:00] Closing
+> "Assiduos is production-ready, open, and auditable. Questions?"
+
+**Key data points to mention:**
+- Base valuation: $~415–425/share  
+- Terminal % of EV: 40–45% (not inflated)
+- WACC range: 7.2% (Year 1) → 7.8% (Year 10)  
+- Cloud CapEx weight: 1.12× (segment premium)  
+- Worst case (macro stress): $380–390 (if rates +400bps)
+
+---
+
 ## Operations
 
 - **Logs:** `docker compose logs -f backend` (or `frontend`, `chroma`).
@@ -153,7 +204,7 @@ Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` fo
 - **Single ticker (MSFT)** — tags and segment parsers are issuer-specific.
 - **TTM** — `FY(n−1) + latest quarter − same quarter prior year` where Company Facts expose `fy`/`fp`.
 - **Treasury** — See Architecture; not a live **CMT** strip; suitable for a teaching WACC curve.
-- **Yahoo** — Unofficial; use Alpha Vantage fallback when rate-limited.
+- **Alpha Vantage** — Free tier enforces spacing between symbol pulls; ingestion waits **15s** between MSFT and SPY.
 - **FCF bridge** — Simplified; not a full cash flow statement.
 - **Outputs are not investment advice.**
 
@@ -165,7 +216,7 @@ Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` fo
 |---------|------------------|
 | Agent returns 401/403 from Anthropic | `ANTHROPIC_API_KEY` in root `.env`; restart `docker compose` |
 | Ingest fails on Treasury | Backend uses Bills for short end; check logs for HTTP errors |
-| Yahoo 429 during ingest | Add `ALPHA_VANTAGE_API_KEY`, re-run `POST /ingest/msft` |
+| Ingest errors on market data | `ALPHA_VANTAGE_API_KEY` in root `.env`; free tier: wait if you hit rate-limit messages in logs, then re-run `POST /ingest/msft` |
 | Model errors | Run ingest first; open `POST /model/msft` JSON for `error` / `model_warnings` |
 | Agent trace empty for minutes | Ensure you are on **localhost/127.0.0.1** so the UI hits **port 8000** directly; see [Agent page & streaming](#agent-page--streaming-important) |
 | `docker compose` frontend build fails on Google Fonts | Retry build when network allows `fonts.googleapis.com`, or build frontend on a machine with access |
@@ -184,7 +235,7 @@ Docker Compose also sets `DATABASE_PATH`, `CHROMA_URL`, and `FRONTEND_ORIGIN` fo
 
 - SEC EDGAR: https://www.sec.gov/edgar  
 - US Treasury Fiscal Data API: https://fiscaldata.treasury.gov/api-documentation/  
-- Yahoo Finance (unofficial chart endpoints); optional Alpha Vantage.
+- Alpha Vantage (monthly adjusted closes for MSFT and SPY).
 
 ---
 

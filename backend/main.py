@@ -10,7 +10,7 @@ app = FastAPI(
     title="Microsoft Corporate Finance Autopilot",
     version="1.0.0",
     description="MSFT-only REST API: SEC ingestion, deterministic DCF (`POST /model/msft`), methodology "
-    "(`GET /model/methodology`), optional cached demo (`GET /model/msft/demo` when ASSIDUOS_DEMO=1), "
+    "(`GET /model/methodology`), cached demo (`GET /model/msft/demo` when ASSIDUOS_DEMO=1), "
     "financials snapshot (`GET /financials/msft`), and agent SSE (`POST /agent/run`). "
     "Interactive OpenAPI: `/docs` and `/redoc`.",
 )

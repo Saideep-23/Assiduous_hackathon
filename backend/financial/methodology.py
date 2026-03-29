@@ -60,7 +60,7 @@ def methodology_narrative() -> dict[str, str | list[str]]:
         ),
         "limitations_bullets": [
             "Segment iXBRL extraction depends on MSFT filing structure; ingestion logs warnings if parsing is thin.",
-            "Market data (Yahoo / Treasury) can be stale or rate-limited; Alpha Vantage is an optional fallback.",
+            "MSFT/SPY prices and beta come from Alpha Vantage; Treasury rates from Fiscal Data API — observation timestamps can lag real-time.",
             "The sensitivity grid uses a flat WACC per cell for speed; scenario valuations use the year-by-year WACC path.",
         ],
     }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -41,6 +42,14 @@ def _log_trace(run_id: str, step: int, tool: str, inp: Any, out: Any, reasoning:
 
 
 def run_agent_stream():
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        yield {
+            "step": 0,
+            "tool": "anthropic_api_key",
+            "reasoning_summary": "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your Anthropic API key.",
+            "status": "error",
+        }
+        return
     run_id = str(uuid.uuid4())
     with get_connection() as conn:
         conn.execute(
